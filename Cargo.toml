@@ -10,5 +10,7 @@ description = "A utility crate for web3 name service operations, forked from bon
 
 
 [dependencies]
+pyth-sdk-solana = "0.10.6"
 solana-program = "2.1.14"
 web3-macros = "0.0.2"
+
