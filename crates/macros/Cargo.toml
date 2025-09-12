@@ -1,0 +1,20 @@
+[package]
+name = "web3-macros"
+version = "0.0.3"
+authors = ["Fan Mocheng <leftear1321.@gmail.com>"]
+license = "MIT"
+edition = "2021"
+repository = "https://github.com/Bonfida/bonfida-utils.git"
+description = "A utility crate for web3 name service operations, forked from bonfida/utils" 
+
+[features]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+solana-program = "2.1.14"
+syn = "1.0"
+quote = "1.0"
+proc-macro2 = "1.0"
+spl-name-service = "0.3.0"
