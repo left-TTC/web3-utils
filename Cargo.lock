@@ -2875,7 +2875,7 @@ dependencies = [
 name = "web3-utils"
 version = "0.1.5"
 dependencies = [
- "borsh 1.5.7",
+ "borsh 0.10.4",
  "bytemuck",
  "lazy_static",
  "pyth-sdk-solana",
