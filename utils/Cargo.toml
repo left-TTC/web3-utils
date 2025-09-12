@@ -1,7 +1,7 @@
 
 [package]
 name = "web3-utils"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Fan Mocheng <leftear1321.@gmail.com>"]
 license = "MIT"
 edition = "2021"
@@ -10,12 +10,13 @@ description = "A utility crate for web3 name service operations, forked from bon
 
 
 [dependencies]
-borsh = "0.10.3"
+borsh = "1.5.7"
 bytemuck = "1.23.2"
 pyth-sdk-solana = "0.10.6"
 pyth-solana-receiver-sdk = "1.0.0"
 solana-program = "2.1.14"
-web3-macros = "0.0.2"
+web3-macros = {version = "0.0.3", path = "../macros"}
+lazy_static = {version = "1.4.0", optional=true}
 
 
 [features]
