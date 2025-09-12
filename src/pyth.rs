@@ -1,64 +1,90 @@
-
 use solana_program::{
-    clock::Clock, msg, program_error::ProgramError, pubkey::Pubkey, sysvar::Sysvar
+    account_info::AccountInfo,
+    clock::Clock,
+    msg,
+    program_error::ProgramError,
+    pubkey::{Pubkey},
+    pubkey,
+    sysvar::Sysvar,
 };
-use pyth_sdk_solana::{
-    state::{
-        load_price_account, SolanaPriceAccount
-    },
-    Price,
+use pyth_solana_receiver_sdk::{
+    self,
+    price_update::Price,
 };
+use std::convert::TryInto;
 
+use crate::{check::{check_account_key}, price_update::OriginSolanaPriceUpdateV2};
 
-pub fn get_oracle_price_fp32(
-    account_data: &[u8],
-    base_decimals: u8,
-    quote_decimals: u8,
+pub const SOL_MINT: Pubkey = pubkey!("So11111111111111111111111111111111111111112");
+
+pub const PYTH_SOL_USD_FEED: Pubkey = pubkey!("7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE");
+
+pub const PRICE_FEED_DISCRIMATOR: [u8; 8] = [34, 241, 35, 99, 157, 126, 244, 205];
+
+pub const PYTH_PRICE_FEED: [u8; 32] = [
+    239, 13, 139, 111, 218, 44, 235, 164, 29, 161, 93, 64, 149, 209, 218, 57, 42, 13,
+    47, 142, 208, 198, 199, 188, 15, 76, 250, 200, 194, 128, 181, 109,
+];
+
+pub fn parse_price(data: &[u8]) -> Result<OriginSolanaPriceUpdateV2, ProgramError> {
+    // now the pyth accounts are anchor account
+    let suffix = &data[..8];
+    if suffix != PRICE_FEED_DISCRIMATOR {
+        return Err(ProgramError::InvalidArgument);
+    }
+    let update = OriginSolanaPriceUpdateV2::new(data)?;
+
+    Ok(update)
+}
+ 
+pub fn get_oracle_price_fp32_v2(
+    account: &AccountInfo,
+    clock: &Clock,
+    maximum_age: u64,
 ) -> Result<u64, ProgramError> {
-    let price_account: &SolanaPriceAccount = load_price_account(account_data)?;
-    let price_feed = price_account.to_price_feed(&Pubkey::default());
+    check_account_key(account, &PYTH_SOL_USD_FEED)?;
 
-    let currentg_time = Clock::get().unwrap().unix_timestamp;
-    let Price { price, expo, .. } = price_feed
-    .get_price_no_older_than(currentg_time, 60)
-    .ok_or_else(|| {
-        msg!("Cannot parse pyth price, information unavailable.");
-        ProgramError::InvalidAccountData
-    })?;
+    let data = &account.data.borrow();
+    let update = parse_price(data)?;
 
-    let scaling = 10u128
-        .checked_pow(expo.unsigned_abs() as u32)
-        .ok_or(ProgramError::InvalidArgument)?;
+    let Price { price, exponent, .. } = update.0
+        .get_price_no_older_than(clock, maximum_age, &PYTH_PRICE_FEED)
+        .map_err(|_| ProgramError::InvalidArgument)?;
 
-    let price_fp32 = if expo >= 0 {
-        ((price as i128) as u128)
-            .checked_shl(32)
-            .and_then(|v| v.checked_mul(scaling))
-            .ok_or(ProgramError::InvalidArgument)?
+    let price = if exponent > 0 {
+        ((price as u128) << 32) * 10u128.pow(exponent as u32)
     } else {
-        ((price as i128) as u128)
-            .checked_shl(32)
-            .and_then(|v| v.checked_div(scaling))
-            .ok_or(ProgramError::InvalidArgument)?
+        ((price as u128) << 32) / 10u128.pow((-exponent) as u32)
     };
 
-    let corrected_price = price_fp32
-        .checked_mul(10u128.pow(quote_decimals as u32))
-        .and_then(|v| v.checked_div(10u128.pow(base_decimals as u32)))
-        .ok_or(ProgramError::InvalidArgument)?;
+    let corrected_price = (price * 10u128.pow(6)) / 10u128.pow(9);
 
     let final_price: u64 = corrected_price
         .try_into()
         .map_err(|_| ProgramError::InvalidArgument)?;
 
-    msg!("Pyth FP32 price value: {:?}", final_price);
+    msg!("Pyth SOL/USD FP32 price: {:?}", final_price);
 
     Ok(final_price)
 }
 
 
-// pub fn sol_from_usd(
-    
-// ) -> Result<u64, ProgramError> {
+pub fn get_domain_price_sol(
+    domain_price_usd: u64,
+    sol_pyth_feed_account: AccountInfo,
+) -> Result<u64, ProgramError> {
 
-// }
+    let clock = Clock::get()
+        .map_err(|_| ProgramError::InvalidArgument)?;
+
+    #[cfg(feature="devnet")]
+    let query_deviation = 6000;
+    #[cfg(not(feature="devnet"))]
+    let query_deviation = 60;
+
+    let sol_price = get_oracle_price_fp32_v2(
+        &sol_pyth_feed_account, &clock, query_deviation)
+        .map_err(|_| ProgramError::InvalidArgument)?;
+
+    Ok(domain_price_usd * sol_price)
+}
