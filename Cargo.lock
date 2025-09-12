@@ -2296,9 +2296,9 @@ dependencies = [
 
 [[package]]
 name = "web3-utils"
-version = "0.1.3"
+version = "0.1.4"
 dependencies = [
- "borsh 1.5.7",
+ "borsh 0.10.4",
  "bytemuck",
  "pyth-sdk-solana",
  "pyth-solana-receiver-sdk",

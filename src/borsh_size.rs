@@ -107,3 +107,56 @@ impl<T: BorshSize> BorshSize for Vec<T> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::BorshSize;
+    use web3_macros::BorshSize;
+    use borsh::{BorshDeserialize, BorshSerialize};
+    use solana_program::pubkey::Pubkey;
+
+    #[derive(BorshSerialize, BorshDeserialize, BorshSize)]
+    struct TestStruct {
+        a: u8,
+        b: u16,
+        c: u32,
+        d: u64,
+        e: u128,
+        f: Pubkey,
+        g: [u8; 32],
+        h: [u64; 4],
+        i: Option<String>,
+        j: Option<u64>,
+        k: Option<u64>,
+    }
+
+    #[derive(BorshSerialize, BorshDeserialize, BorshSize)]
+    enum TestEnum {
+        FirstVariant,
+        SecondVariant,
+    }
+
+    #[test]
+    fn functional() {
+        let s = TestStruct {
+            a: 0,
+            b: 0,
+            c: 0,
+            d: 0,
+            e: 0,
+            f: Pubkey::new_unique(),
+            g: [0; 32],
+            h: [0; 4],
+            i: Some("this is a test".to_string()),
+            j: Some(0),
+            k: None,
+        };
+        assert_eq!(
+            s.borsh_len(),
+            1 + 2 + 4 + 8 + 16 + 32 + 32 + 32 + 19 + 9 + 1
+        );
+
+        let v = TestEnum::FirstVariant;
+        assert_eq!(v.borsh_len(), 1);
+    }
+}

@@ -1,7 +1,7 @@
 
 [package]
 name = "web3-utils"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Fan Mocheng <leftear1321.@gmail.com>"]
 license = "MIT"
 edition = "2021"
@@ -10,7 +10,7 @@ description = "A utility crate for web3 name service operations, forked from bon
 
 
 [dependencies]
-borsh = "1.5.7"
+borsh = "0.10.3"
 bytemuck = "1.23.2"
 pyth-sdk-solana = "0.10.6"
 pyth-solana-receiver-sdk = "1.0.0"
