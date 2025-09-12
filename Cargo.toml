@@ -11,6 +11,7 @@ description = "A utility crate for web3 name service operations, forked from bon
 
 [dependencies]
 borsh = "1.5.7"
+bytemuck = "1.23.2"
 pyth-sdk-solana = "0.10.6"
 pyth-solana-receiver-sdk = "1.0.0"
 solana-program = "2.1.14"
