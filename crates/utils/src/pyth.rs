@@ -71,7 +71,7 @@ pub fn get_oracle_price_fp32_v2(
 
 pub fn get_domain_price_sol(
     domain_price_usd: u64,
-    sol_pyth_feed_account: AccountInfo,
+    sol_pyth_feed_account: &AccountInfo,
 ) -> Result<u64, ProgramError> {
 
     let clock = Clock::get()
