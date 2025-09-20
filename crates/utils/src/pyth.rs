@@ -19,10 +19,10 @@ pub const PYTH_SOL_USD_FEED: Pubkey = pubkey!("7UVimffxr9ow1uXYxsr4LHAcV58mLzhmw
 
 pub const PRICE_FEED_DISCRIMATOR: [u8; 8] = [34, 241, 35, 99, 157, 126, 244, 205];
 
-pub const PYTH_PRICE_FEED: [u8; 32] = [
-    239, 13, 139, 111, 218, 44, 235, 164, 29, 161, 93, 64, 149, 209, 218, 57, 42, 13,
-    47, 142, 208, 198, 199, 188, 15, 76, 250, 200, 194, 128, 181, 109,
-];
+// pub const PYTH_PRICE_FEED: [u8; 32] = [
+//     239, 13, 139, 111, 218, 44, 235, 164, 29, 161, 93, 64, 149, 209, 218, 57, 42, 13,
+//     47, 142, 208, 198, 199, 188, 15, 76, 250, 200, 194, 128, 181, 109,
+// ];
 
 pub fn parse_price(data: &[u8]) -> Result<OriginSolanaPriceUpdateV2, ProgramError> {
     // now the pyth accounts are anchor account
@@ -51,8 +51,10 @@ pub fn get_oracle_price_fp32(
 
     msg!("max age: {:?}", maximum_age);
 
+    let actual_feed_id = update.0.price_message.feed_id;
+
     let Price { price, exponent, .. } = update.0
-        .get_price_no_older_than(clock, maximum_age, &PYTH_PRICE_FEED)
+        .get_price_no_older_than(clock, maximum_age, &actual_feed_id)
         .unwrap();
     msg!("get the price ok");
 
