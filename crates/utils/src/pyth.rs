@@ -13,7 +13,7 @@ use std::convert::TryInto;
 
 use crate::{check::{check_account_key, check_account_owner}, price_update::OriginSolanaPriceUpdateV2};
 
-pub const PYTH_SOL_USD_FEED: Pubkey = pubkey!("7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE");
+pub const PYTH_SOL_USD_FEED: Pubkey = pubkey!("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix");
 
 // use wsol for test
 // pub const PYTH_WSOL_USD_FEED: Pubkey = pubkey!()
@@ -50,20 +50,18 @@ pub fn get_oracle_price_fp32(
 
     let data = &account.data.borrow();
     let update = parse_price(data)?;
-    msg!("get the update ok");
 
     msg!("max age: {:?}", maximum_age);
 
     let actual_feed_id = update.0.price_message.feed_id;
 
-    msg!("feed: {:?}", actual_feed_id);
     msg!("update time: {:?}", update.0.price_message.prev_publish_time);
     msg!("now time: {:?}", &clock.unix_timestamp);
 
     let pyth_solana_receiver_sdk::price_update::Price { 
         price, exponent, .. 
     } = update.0
-        .get_price_no_older_than(clock, maximum_age, &PYTH_SOL_PRICE_FEED)
+        .get_price_no_older_than(clock, maximum_age, &actual_feed_id)
         .map_err(|e| {
             msg!("pyth error: {:?}", e);
             ProgramError::InvalidArgument
