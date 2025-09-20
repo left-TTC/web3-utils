@@ -5,17 +5,18 @@ use solana_program::{
     program_error::ProgramError,
     pubkey::{Pubkey},
     pubkey,
-    sysvar::Sysvar,
 };
 use pyth_solana_receiver_sdk::{
     self,
-    price_update::Price,
 };
 use std::convert::TryInto;
 
 use crate::{check::{check_account_key}, price_update::OriginSolanaPriceUpdateV2};
 
 pub const PYTH_SOL_USD_FEED: Pubkey = pubkey!("7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE");
+
+// use wsol for test
+// pub const PYTH_WSOL_USD_FEED: Pubkey = pubkey!()
 
 pub const PRICE_FEED_DISCRIMATOR: [u8; 8] = [34, 241, 35, 99, 157, 126, 244, 205];
 
@@ -53,7 +54,11 @@ pub fn get_oracle_price_fp32(
 
     let actual_feed_id = update.0.price_message.feed_id;
 
-    let Price { price, exponent, .. } = update.0
+    msg!("feed: {:?}", actual_feed_id);
+
+    let pyth_solana_receiver_sdk::price_update::Price { 
+        price, exponent, .. 
+    } = update.0
         .get_price_no_older_than(clock, maximum_age, &actual_feed_id)
         .map_err(|e| {
             msg!("pyth error: {:?}", e);
@@ -83,14 +88,10 @@ pub fn get_oracle_price_fp32(
 pub fn get_domain_price_sol(
     domain_price_usd: u64,
     sol_pyth_feed_account: &AccountInfo,
+    clock: &Clock,
 ) -> Result<u64, ProgramError> {
-
-    let clock = Clock::get()
-        .map_err(|_| ProgramError::InvalidArgument)?;
-    msg!("get clock ok");
-
     #[cfg(feature="devnet")]
-    let query_deviation = 60000000000;
+    let query_deviation = 6000;
     #[cfg(not(feature="devnet"))]
     let query_deviation = 60;
 
