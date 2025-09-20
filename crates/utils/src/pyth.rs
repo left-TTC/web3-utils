@@ -20,10 +20,10 @@ pub const PYTH_SOL_USD_FEED: Pubkey = pubkey!("7UVimffxr9ow1uXYxsr4LHAcV58mLzhmw
 
 pub const PRICE_FEED_DISCRIMATOR: [u8; 8] = [34, 241, 35, 99, 157, 126, 244, 205];
 
-// pub const PYTH_PRICE_FEED: [u8; 32] = [
-//     239, 13, 139, 111, 218, 44, 235, 164, 29, 161, 93, 64, 149, 209, 218, 57, 42, 13,
-//     47, 142, 208, 198, 199, 188, 15, 76, 250, 200, 194, 128, 181, 109,
-// ];
+pub const PYTH_SOL_PRICE_FEED: [u8; 32] = [
+    239, 13, 139, 111, 218, 44, 235, 164, 29, 161, 93, 64, 149, 209, 218, 57, 42, 13,
+    47, 142, 208, 198, 199, 188, 15, 76, 250, 200, 194, 128, 181, 109,
+];
 
 pub fn parse_price(data: &[u8]) -> Result<OriginSolanaPriceUpdateV2, ProgramError> {
     // now the pyth accounts are anchor account
@@ -55,11 +55,13 @@ pub fn get_oracle_price_fp32(
     let actual_feed_id = update.0.price_message.feed_id;
 
     msg!("feed: {:?}", actual_feed_id);
+    msg!("update time: {:?}", update.0.price_message.prev_publish_time);
+    msg!("now time: {:?}", &clock.unix_timestamp);
 
     let pyth_solana_receiver_sdk::price_update::Price { 
         price, exponent, .. 
     } = update.0
-        .get_price_no_older_than(clock, maximum_age, &actual_feed_id)
+        .get_price_no_older_than(clock, maximum_age, &PYTH_SOL_PRICE_FEED)
         .map_err(|e| {
             msg!("pyth error: {:?}", e);
             ProgramError::InvalidArgument
@@ -98,7 +100,8 @@ pub fn get_domain_price_sol(
     msg!("now the deviation: {:?}", query_deviation);
 
     let sol_price = get_oracle_price_fp32(
-        &sol_pyth_feed_account, &clock, query_deviation).unwrap();
+        &sol_pyth_feed_account, &clock, query_deviation
+    ).unwrap();
 
     Ok(domain_price_usd * sol_price)
 }

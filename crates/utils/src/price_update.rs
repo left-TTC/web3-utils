@@ -1,8 +1,8 @@
 use pyth_solana_receiver_sdk::price_update::{PriceFeedMessage, PriceUpdateV2, VerificationLevel};
 use solana_program::{msg, program_error::ProgramError, pubkey::Pubkey};
+use borsh::{BorshDeserialize, BorshSerialize};
 
-
-
+#[derive(BorshSerialize, BorshDeserialize)]
 pub struct OriginSolanaPriceUpdateV2(pub PriceUpdateV2);
 
 impl OriginSolanaPriceUpdateV2 {
