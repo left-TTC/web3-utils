@@ -30,6 +30,7 @@ pub fn parse_price(data: &[u8]) -> Result<OriginSolanaPriceUpdateV2, ProgramErro
     // now the pyth accounts are anchor account
     let suffix = &data[..8];
     if suffix != PRICE_FEED_DISCRIMATOR {
+        msg!("discrimator err");
         return Err(ProgramError::InvalidArgument);
     }
     let update = OriginSolanaPriceUpdateV2::new(data)?;
@@ -37,7 +38,7 @@ pub fn parse_price(data: &[u8]) -> Result<OriginSolanaPriceUpdateV2, ProgramErro
     Ok(update)
 }
  
-pub fn get_oracle_price_fp32_v2(
+pub fn get_oracle_price_fp32(
     account: &AccountInfo,
     clock: &Clock,
     maximum_age: u64,
@@ -47,10 +48,12 @@ pub fn get_oracle_price_fp32_v2(
 
     let data = &account.data.borrow();
     let update = parse_price(data)?;
+    msg!("get the update ok");
 
     let Price { price, exponent, .. } = update.0
         .get_price_no_older_than(clock, maximum_age, &PYTH_PRICE_FEED)
         .map_err(|_| ProgramError::InvalidArgument)?;
+    msg!("get the price ok");
 
     let price = if exponent > 0 {
         ((price as u128) << 32) * 10u128.pow(exponent as u32)
@@ -63,6 +66,7 @@ pub fn get_oracle_price_fp32_v2(
     let final_price: u64 = corrected_price
         .try_into()
         .map_err(|_| ProgramError::InvalidArgument)?;
+    msg!("get the correct price ok");
 
     msg!("Pyth SOL/USD FP32 price: {:?}", final_price);
 
@@ -86,7 +90,7 @@ pub fn get_domain_price_sol(
 
     msg!("now the deviation: {:?}", query_deviation);
 
-    let sol_price = get_oracle_price_fp32_v2(
+    let sol_price = get_oracle_price_fp32(
         &sol_pyth_feed_account, &clock, query_deviation)
         .map_err(|_| ProgramError::InvalidArgument)?;
 

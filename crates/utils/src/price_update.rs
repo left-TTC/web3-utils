@@ -1,5 +1,5 @@
 use pyth_solana_receiver_sdk::price_update::{PriceFeedMessage, PriceUpdateV2, VerificationLevel};
-use solana_program::{program_error::ProgramError, pubkey::Pubkey};
+use solana_program::{msg, program_error::ProgramError, pubkey::Pubkey};
 
 
 
@@ -9,13 +9,15 @@ impl OriginSolanaPriceUpdateV2 {
     
     pub fn new(data: &[u8]) -> Result<OriginSolanaPriceUpdateV2, ProgramError> {
         
+        const TAG: usize = 8;
         const WRITE_AUTH_LEN: usize = 32;
         const VERIFICATION_LEVEL_LEN: usize = 2;
-        const PRICE_MESSAGE_LEN: usize = 84;
+        const PRICE_MESSAGE_LEN: usize = 84;  //32 + 8 + 8 + 4 + 8 + 8 + 8 + 8
         const POSTED_SLOT_LEN: usize = 8;
 
-        let need = 8 + WRITE_AUTH_LEN + VERIFICATION_LEVEL_LEN + PRICE_MESSAGE_LEN + POSTED_SLOT_LEN;
+        let need = TAG + WRITE_AUTH_LEN + VERIFICATION_LEVEL_LEN + PRICE_MESSAGE_LEN + POSTED_SLOT_LEN;
         if data.len() < need {
+            msg!("construct length err");
             return Err(ProgramError::InvalidAccountData);
         }
 
@@ -35,6 +37,8 @@ impl OriginSolanaPriceUpdateV2 {
             _ => return Err(ProgramError::InvalidAccountData),
         };
         offset += VERIFICATION_LEVEL_LEN;
+
+        // construct the price message
 
         let feed_id: [u8; 32] = data[offset..offset + 32].try_into().unwrap();
         offset += 32;
