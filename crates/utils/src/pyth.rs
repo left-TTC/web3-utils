@@ -43,6 +43,7 @@ pub fn get_oracle_price_fp32_v2(
     maximum_age: u64,
 ) -> Result<u64, ProgramError> {
     check_account_key(account, &PYTH_SOL_USD_FEED)?;
+    msg!("pyth account ok");
 
     let data = &account.data.borrow();
     let update = parse_price(data)?;
@@ -76,11 +77,14 @@ pub fn get_domain_price_sol(
 
     let clock = Clock::get()
         .map_err(|_| ProgramError::InvalidArgument)?;
+    msg!("get clock ok");
 
     #[cfg(feature="devnet")]
     let query_deviation = 6000;
     #[cfg(not(feature="devnet"))]
     let query_deviation = 60;
+
+    msg!("now the deviation: {:?}", query_deviation);
 
     let sol_price = get_oracle_price_fp32_v2(
         &sol_pyth_feed_account, &clock, query_deviation)
