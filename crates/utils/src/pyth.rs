@@ -15,8 +15,6 @@ use std::convert::TryInto;
 
 use crate::{check::{check_account_key}, price_update::OriginSolanaPriceUpdateV2};
 
-pub const SOL_MINT: Pubkey = pubkey!("So11111111111111111111111111111111111111112");
-
 pub const PYTH_SOL_USD_FEED: Pubkey = pubkey!("7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE");
 
 pub const PRICE_FEED_DISCRIMATOR: [u8; 8] = [34, 241, 35, 99, 157, 126, 244, 205];
@@ -51,9 +49,11 @@ pub fn get_oracle_price_fp32(
     let update = parse_price(data)?;
     msg!("get the update ok");
 
+    msg!("max age: {:?}", maximum_age);
+
     let Price { price, exponent, .. } = update.0
         .get_price_no_older_than(clock, maximum_age, &PYTH_PRICE_FEED)
-        .map_err(|_| ProgramError::InvalidArgument)?;
+        .unwrap();
     msg!("get the price ok");
 
     let price = if exponent > 0 {
