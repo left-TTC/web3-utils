@@ -73,7 +73,9 @@ pub fn get_domain_price_sol(
 
     // lamports = (domain_usd << 32) / (sol_usd_price_fp32 / 1e9)
     // (domain_usd * 1e9) / sol_price(USD)
-    let lamports = ((domain_price_usd as u128) << 32)
+    let usd_amount = domain_price_usd / 1_000_000;
+
+    let lamports = ((usd_amount as u128) << 32)
         .checked_mul(1_000_000_000u128)
         .ok_or(ProgramError::InvalidArgument)?
         / sol_price_fp32;
