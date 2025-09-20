@@ -92,7 +92,7 @@ pub fn get_domain_price_sol(
     clock: &Clock,
 ) -> Result<u64, ProgramError> {
     #[cfg(feature="devnet")]
-    let query_deviation = 6000;
+    let query_deviation = 600000;
     #[cfg(not(feature="devnet"))]
     let query_deviation = 60;
 
