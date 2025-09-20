@@ -55,7 +55,10 @@ pub fn get_oracle_price_fp32(
 
     let Price { price, exponent, .. } = update.0
         .get_price_no_older_than(clock, maximum_age, &actual_feed_id)
-        .unwrap();
+        .map_err(|e| {
+            msg!("pyth error: {:?}", e);
+            ProgramError::InvalidArgument
+        })?;
     msg!("get the price ok");
 
     let price = if exponent > 0 {
@@ -87,7 +90,7 @@ pub fn get_domain_price_sol(
     msg!("get clock ok");
 
     #[cfg(feature="devnet")]
-    let query_deviation = 6000;
+    let query_deviation = 60000;
     #[cfg(not(feature="devnet"))]
     let query_deviation = 60;
 
