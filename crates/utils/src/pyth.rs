@@ -43,7 +43,7 @@ pub fn get_oracle_price_fp32(
     clock: &Clock,
     maximum_age: u64,
 ) -> Result<u64, ProgramError> {
-    check_account_owner(account, &pyth_solana_receiver_sdk::ID)?;
+    
     check_account_key(account, &PYTH_SOL_USD_FEED)?;
     msg!("pyth account ok");
 
