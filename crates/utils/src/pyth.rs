@@ -3,104 +3,82 @@ use solana_program::{
     clock::Clock,
     msg,
     program_error::ProgramError,
-    pubkey::{Pubkey},
+    pubkey::Pubkey,
     pubkey,
 };
-use pyth_solana_receiver_sdk::{
-    self,
-};
+use pyth_solana_receiver_sdk;
 use std::convert::TryInto;
 
-use crate::{check::{check_account_key, check_account_owner}, price_update::OriginSolanaPriceUpdateV2};
+use crate::{
+    check::{check_account_key},
+    price_update::OriginSolanaPriceUpdateV2,
+};
 
 pub const PYTH_SOL_USD_FEED: Pubkey = pubkey!("7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE");
 
-// use wsol for test
-// pub const PYTH_WSOL_USD_FEED: Pubkey = pubkey!()
-
 pub const PRICE_FEED_DISCRIMATOR: [u8; 8] = [34, 241, 35, 99, 157, 126, 244, 205];
 
-pub const PYTH_SOL_PRICE_FEED: [u8; 32] = [
-    239, 13, 139, 111, 218, 44, 235, 164, 29, 161, 93, 64, 149, 209, 218, 57, 42, 13,
-    47, 142, 208, 198, 199, 188, 15, 76, 250, 200, 194, 128, 181, 109,
-];
-
 pub fn parse_price(data: &[u8]) -> Result<OriginSolanaPriceUpdateV2, ProgramError> {
-    // now the pyth accounts are anchor account
     let suffix = &data[..8];
     if suffix != PRICE_FEED_DISCRIMATOR {
         msg!("discrimator err");
         return Err(ProgramError::InvalidArgument);
     }
-    msg!("discrimator OK");
-    let update = OriginSolanaPriceUpdateV2::new(data)?;
-
-    Ok(update)
+    Ok(OriginSolanaPriceUpdateV2::new(data)?)
 }
- 
+
+/// 获取 Pyth SOL/USD 价格，返回的是 FP32 定点数
 pub fn get_oracle_price_fp32(
     account: &AccountInfo,
     clock: &Clock,
     maximum_age: u64,
-) -> Result<u64, ProgramError> {
-    
+) -> Result<u128, ProgramError> {
     check_account_key(account, &PYTH_SOL_USD_FEED)?;
-    msg!("pyth account ok");
-
     let data = &account.data.borrow();
     let update = parse_price(data)?;
 
-    msg!("max age: {:?}", maximum_age);
-
     let actual_feed_id = update.0.price_message.feed_id;
 
-    msg!("update time: {:?}", update.0.price_message.prev_publish_time);
-    msg!("now time: {:?}", &clock.unix_timestamp);
+    let pyth_solana_receiver_sdk::price_update::Price { price, exponent, .. } =
+        update.0
+            .get_price_no_older_than(clock, maximum_age, &actual_feed_id)
+            .map_err(|e| {
+                msg!("pyth error: {:?}", e);
+                ProgramError::InvalidArgument
+            })?;
 
-    let pyth_solana_receiver_sdk::price_update::Price { 
-        price, exponent, .. 
-    } = update.0
-        .get_price_no_older_than(clock, maximum_age, &actual_feed_id)
-        .map_err(|e| {
-            msg!("pyth error: {:?}", e);
-            ProgramError::InvalidArgument
-        })?;
-    msg!("get the price ok");
-
-    let price = if exponent > 0 {
-        ((price as u128) << 32) * 10u128.pow(exponent as u32)
+    let raw_price = price as i128;
+    let fp32_price = if exponent < 0 {
+        (raw_price << 32) / 10i128.pow((-exponent) as u32)
     } else {
-        ((price as u128) << 32) / 10u128.pow((-exponent) as u32)
+        (raw_price << 32) * 10i128.pow(exponent as u32)
     };
 
-    let corrected_price = (price * 10u128.pow(6)) / 10u128.pow(9);
-
-    let final_price: u64 = corrected_price
-        .try_into()
-        .map_err(|_| ProgramError::InvalidArgument)?;
-    msg!("get the correct price ok");
-
-    msg!("Pyth SOL/USD FP32 price: {:?}", final_price);
-
-    Ok(final_price)
+    Ok(fp32_price as u128)
 }
 
-
+/// 输入：域名价格 (单位 USD，对标 lamports) 
+/// 输出：对应 lamports (u64)
 pub fn get_domain_price_sol(
     domain_price_usd: u64,
     sol_pyth_feed_account: &AccountInfo,
     clock: &Clock,
 ) -> Result<u64, ProgramError> {
-    #[cfg(feature="devnet")]
-    let query_deviation = 600000;
-    #[cfg(not(feature="devnet"))]
+    #[cfg(feature = "devnet")]
+    let query_deviation = 600_000;
+    #[cfg(not(feature = "devnet"))]
     let query_deviation = 60;
 
-    msg!("now the deviation: {:?}", query_deviation);
+    let sol_price_fp32 = get_oracle_price_fp32(sol_pyth_feed_account, clock, query_deviation)?;
 
-    let sol_price = get_oracle_price_fp32(
-        &sol_pyth_feed_account, &clock, query_deviation
-    ).unwrap();
+    // lamports = (domain_usd << 32) / (sol_usd_price_fp32 / 1e9)
+    // (domain_usd * 1e9) / sol_price(USD)
+    let lamports = ((domain_price_usd as u128) << 32)
+        .checked_mul(1_000_000_000u128)
+        .ok_or(ProgramError::InvalidArgument)?
+        / sol_price_fp32;
 
-    Ok(domain_price_usd * sol_price)
+    msg!("{:?} usd = {:?} lamports", domain_price_usd, lamports);
+
+    Ok(lamports.try_into().map_err(|_| ProgramError::InvalidArgument)?)
 }
