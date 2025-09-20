@@ -90,15 +90,14 @@ pub fn get_domain_price_sol(
     msg!("get clock ok");
 
     #[cfg(feature="devnet")]
-    let query_deviation = 60000;
+    let query_deviation = 60000000000;
     #[cfg(not(feature="devnet"))]
     let query_deviation = 60;
 
     msg!("now the deviation: {:?}", query_deviation);
 
     let sol_price = get_oracle_price_fp32(
-        &sol_pyth_feed_account, &clock, query_deviation)
-        .map_err(|_| ProgramError::InvalidArgument)?;
+        &sol_pyth_feed_account, &clock, query_deviation).unwrap();
 
     Ok(domain_price_usd * sol_price)
 }
