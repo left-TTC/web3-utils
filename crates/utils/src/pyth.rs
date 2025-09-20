@@ -33,6 +33,7 @@ pub fn parse_price(data: &[u8]) -> Result<OriginSolanaPriceUpdateV2, ProgramErro
         msg!("discrimator err");
         return Err(ProgramError::InvalidArgument);
     }
+    msg!("discrimator OK");
     let update = OriginSolanaPriceUpdateV2::new(data)?;
 
     Ok(update)

@@ -20,6 +20,7 @@ impl OriginSolanaPriceUpdateV2 {
             msg!("construct length err");
             return Err(ProgramError::InvalidAccountData);
         }
+        msg!("length ok");
 
         let mut offset = 8;
 
@@ -27,6 +28,8 @@ impl OriginSolanaPriceUpdateV2 {
             data[offset..offset + WRITE_AUTH_LEN].try_into().unwrap(),
         );
         offset += WRITE_AUTH_LEN;
+
+        msg!("if there is not error, means verification_level error");
 
         let ver_bytes: [u8; VERIFICATION_LEVEL_LEN] = data[offset..offset + VERIFICATION_LEVEL_LEN]
             .try_into()
