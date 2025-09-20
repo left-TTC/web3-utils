@@ -13,7 +13,7 @@ use std::convert::TryInto;
 
 use crate::{check::{check_account_key, check_account_owner}, price_update::OriginSolanaPriceUpdateV2};
 
-pub const PYTH_SOL_USD_FEED: Pubkey = pubkey!("J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix");
+pub const PYTH_SOL_USD_FEED: Pubkey = pubkey!("7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE");
 
 // use wsol for test
 // pub const PYTH_WSOL_USD_FEED: Pubkey = pubkey!()
@@ -44,7 +44,6 @@ pub fn get_oracle_price_fp32(
     maximum_age: u64,
 ) -> Result<u64, ProgramError> {
     check_account_owner(account, &pyth_solana_receiver_sdk::ID)?;
-    msg!("owner err");
     check_account_key(account, &PYTH_SOL_USD_FEED)?;
     msg!("pyth account ok");
 

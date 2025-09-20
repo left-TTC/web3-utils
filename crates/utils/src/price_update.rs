@@ -1,48 +1,34 @@
 use pyth_solana_receiver_sdk::price_update::{PriceFeedMessage, PriceUpdateV2, VerificationLevel};
 use solana_program::{msg, program_error::ProgramError, pubkey::Pubkey};
-use borsh::{BorshDeserialize, BorshSerialize};
 
-#[derive(BorshSerialize, BorshDeserialize)]
+
 pub struct OriginSolanaPriceUpdateV2(pub PriceUpdateV2);
 
 impl OriginSolanaPriceUpdateV2 {
-    
     pub fn new(data: &[u8]) -> Result<OriginSolanaPriceUpdateV2, ProgramError> {
-        
         const TAG: usize = 8;
-        const WRITE_AUTH_LEN: usize = 32;
-        const VERIFICATION_LEVEL_LEN: usize = 2;
-        const PRICE_MESSAGE_LEN: usize = 84;  //32 + 8 + 8 + 4 + 8 + 8 + 8 + 8
-        const POSTED_SLOT_LEN: usize = 8;
+        let mut offset = TAG;
 
-        let need = TAG + WRITE_AUTH_LEN + VERIFICATION_LEVEL_LEN + PRICE_MESSAGE_LEN + POSTED_SLOT_LEN;
-        if data.len() < need {
-            msg!("construct length err");
-            return Err(ProgramError::InvalidAccountData);
-        }
-        msg!("length ok");
-
-        let mut offset = 8;
-
+        // 1. write_authority
         let write_authority = Pubkey::new_from_array(
-            data[offset..offset + WRITE_AUTH_LEN].try_into().unwrap(),
+            data[offset..offset + 32].try_into().map_err(|_| ProgramError::InvalidAccountData)?,
         );
-        offset += WRITE_AUTH_LEN;
+        offset += 32;
 
-        msg!("if there is not error, means verification_level error");
-
-        let ver_bytes: [u8; VERIFICATION_LEVEL_LEN] = data[offset..offset + VERIFICATION_LEVEL_LEN]
-            .try_into()
-            .unwrap();
-        let verification_level = match ver_bytes[0] {
-            0 => VerificationLevel::Partial { num_signatures: ver_bytes[1] },
+        // 2. verification_level (dynamic size)
+        let variant = data[offset];
+        offset += 1;
+        let verification_level = match variant {
+            0 => {
+                let num = data[offset];
+                offset += 1;
+                VerificationLevel::Partial { num_signatures: num }
+            }
             1 => VerificationLevel::Full,
             _ => return Err(ProgramError::InvalidAccountData),
         };
-        offset += VERIFICATION_LEVEL_LEN;
 
-        // construct the price message
-
+        // 3. price_message
         let feed_id: [u8; 32] = data[offset..offset + 32].try_into().unwrap();
         offset += 32;
 
@@ -78,7 +64,14 @@ impl OriginSolanaPriceUpdateV2 {
             ema_conf,
         };
 
+        // 4. posted_slot
         let posted_slot = u64::from_le_bytes(data[offset..offset + 8].try_into().unwrap());
+        offset += 8;
+
+        if offset > data.len() {
+            msg!("data length not enough");
+            return Err(ProgramError::InvalidAccountData);
+        }
 
         let inner = PriceUpdateV2 {
             write_authority,
