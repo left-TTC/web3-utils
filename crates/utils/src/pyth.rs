@@ -11,7 +11,7 @@ use pyth_solana_receiver_sdk::{
 };
 use std::convert::TryInto;
 
-use crate::{check::{check_account_key}, price_update::OriginSolanaPriceUpdateV2};
+use crate::{check::{check_account_key, check_account_owner}, price_update::OriginSolanaPriceUpdateV2};
 
 pub const PYTH_SOL_USD_FEED: Pubkey = pubkey!("7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE");
 
@@ -43,6 +43,8 @@ pub fn get_oracle_price_fp32(
     clock: &Clock,
     maximum_age: u64,
 ) -> Result<u64, ProgramError> {
+    check_account_owner(account, &pyth_solana_receiver_sdk::ID)?;
+    msg!("owner err");
     check_account_key(account, &PYTH_SOL_USD_FEED)?;
     msg!("pyth account ok");
 
