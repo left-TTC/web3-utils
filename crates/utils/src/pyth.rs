@@ -47,7 +47,11 @@ pub fn get_oracle_price_fp32(
                 ProgramError::InvalidArgument
             })?;
 
+    // price is the integar, and the exponent is the power
+    // such as Price: 111111, exponent: -4 => 11.1111 usdt
     let raw_price = price as i128;
+
+    
     let fp32_price = if exponent < 0 {
         (raw_price << 32) / 10i128.pow((-exponent) as u32)
     } else {
@@ -57,13 +61,27 @@ pub fn get_oracle_price_fp32(
     Ok(fp32_price as u128)
 }
 
+pub fn cal_usd_to_sol(
+    usd_decimal: u64,
+    fp32_sol_price: u128,
+) -> u64 {
+    let lamports = (usd_decimal as u128)
+        .checked_mul(1_000_000_000u128) 
+        .unwrap()
+        .checked_shl(32)               
+        .unwrap()
+        / fp32_sol_price;              
+
+    lamports as u64
+}
+
 /// 输入：域名价格 (单位 USD，对标 lamports) 
 /// 输出：对应 lamports (u64)
 pub fn get_domain_price_sol(
     domain_price_usd: u64,
     sol_pyth_feed_account: &AccountInfo,
     clock: &Clock,
-) -> Result<u64, ProgramError> {
+) -> Result<(u64, u128), ProgramError> {
     #[cfg(feature = "devnet")]
     let query_deviation = 600_000;
     #[cfg(not(feature = "devnet"))]
@@ -73,14 +91,9 @@ pub fn get_domain_price_sol(
 
     // lamports = (domain_usd << 32) / (sol_usd_price_fp32 / 1e9)
     // (domain_usd * 1e9) / sol_price(USD)
-    let usd_amount = domain_price_usd / 1_000_000;
-
-    let lamports = ((usd_amount as u128) << 32)
-        .checked_mul(1_000_000_000u128)
-        .ok_or(ProgramError::InvalidArgument)?
-        / sol_price_fp32;
+    let lamports = cal_usd_to_sol(domain_price_usd, sol_price_fp32);
 
     msg!("{:?} usd = {:?} lamports", domain_price_usd, lamports);
 
-    Ok(lamports.try_into().map_err(|_| ProgramError::InvalidArgument)?)
+    Ok((lamports.try_into().map_err(|_| ProgramError::InvalidArgument)?, sol_price_fp32))
 }
