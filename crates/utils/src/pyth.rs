@@ -81,7 +81,7 @@ pub fn get_domain_price_sol(
     domain_price_usd: u64,
     sol_pyth_feed_account: &AccountInfo,
     clock: &Clock,
-) -> Result<(u64, u128), ProgramError> {
+) -> Result<u64, ProgramError> {
     #[cfg(feature = "devnet")]
     let query_deviation = 600_000;
     #[cfg(not(feature = "devnet"))]
@@ -95,5 +95,5 @@ pub fn get_domain_price_sol(
 
     msg!("{:?} usd = {:?} lamports", domain_price_usd, lamports);
 
-    Ok((lamports.try_into().map_err(|_| ProgramError::InvalidArgument)?, sol_price_fp32))
+    Ok(lamports.try_into().map_err(|_| ProgramError::InvalidArgument)?)
 }
